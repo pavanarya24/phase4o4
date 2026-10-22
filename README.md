@@ -1,20 +1,38 @@
 # PHASE 404 — Phase 1
 
-A mechanical trading indicator for session-liquidity trading, running **outside TradingView**.
+A mechanical trading indicator for session-liquidity trading.
 It reads New York session highs and lows, flags liquidity raids, waits for a market
 structure shift, then produces OTE and IFVG setups with a stop, a target and a
 broker-ready order payload.
 
-Two ways to use it:
+Three ways to use it:
 
-* **Interactive chart** — live WebGL candlestick chart in your browser with the indicator drawn on it.
+* **On TradingView** — add the protected script to any chart in one click. No source code involved.
+* **Interactive chart** — live WebGL candlestick chart in your own browser, running locally.
 * **Headless scanner** — one command runs the indicator over real market data and prints the current setup.
 
-No TradingView subscription. No Pine Editor. No setup beyond `npm install`.
+The TradingView route needs nothing installed. The local route needs no
+TradingView account — just `npm install`.
 
 ---
 
-## Quick start
+## Use it on TradingView (no code, no setup)
+
+**[PHASE 404 | Mechanical Model →](https://in.tradingview.com/script/QThYTBMI-PHASE-404-Mechanical-Model/)**
+
+1. Open the link and click **Add to chart** (or star it first).
+2. It appears under *Indicators → My scripts* in your TradingView chart from then on.
+
+It is a **protected-source script**. You get the full indicator — sessions, raid
+markers, structure shifts, OTE and IFVG zones, the session clock table, and every
+setting — without being shown or touching the code. Works on 1m, 3m and 5m charts.
+
+This is the fastest way to try it. The local options below are for automation, the
+headless scanner, and running without a TradingView account.
+
+---
+
+## Quick start (local)
 
 ```bash
 npm install
@@ -161,6 +179,9 @@ It is a single binary asset that the chart and the scanner load directly. There 
 nothing to configure inside it: the sessions, the raid logic, the confirmation step
 and the entry models above are what it runs.
 
+The same logic runs on TradingView as a protected-source script — the local asset
+and the TradingView script are the two delivery forms of one indicator.
+
 ---
 
 ## Requirements
@@ -189,6 +210,13 @@ This software is an indicator, not financial advice, and it is not a broker.
 It does not place orders — it prints the numbers for you to place them.
 Trading carries substantial risk of loss. Use it with your own judgement and risk
 management, and test it on a demo account first.
+
+---
+
+## Links
+
+* **TradingView:** https://in.tradingview.com/script/QThYTBMI-PHASE-404-Mechanical-Model/
+* **Repository:** https://github.com/pavanarya24/phase4o4
 
 ---
 
