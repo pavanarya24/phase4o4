@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHASE 404 | Vela Charting Platform (PineTS Engine)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0b0e14;
+      color: #e1e7ec;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      height: 52px;
+      background: #111722;
+      border-bottom: 1px solid #1e2837;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 10;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      background: rgba(41, 98, 255, 0.18);
+      color: #2962ff;
+      border: 1px solid rgba(41, 98, 255, 0.4);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-gold {
+      background: rgba(255, 171, 0, 0.15);
+      color: #ffab00;
+      border-color: rgba(255, 171, 0, 0.4);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    select, button {
+      background: #192231;
+      border: 1px solid #28374b;
+      color: #d1d4dc;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    select:hover, button:hover {
+      background: #223046;
+      border-color: #3b506d;
+    }
+    button.active {
+      background: #2962ff;
+      color: #fff;
+      border-color: #2962ff;
+    }
+    #chart-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 52px);
+    }
+    #chart {
+      width: 100%;
+      height: 100%;
+    }
+    #status-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(17, 23, 34, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid #222f42;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .status-row {
+      display: flex;
+      gap: 8px;
+    }
+    .status-label {
+      color: #787b86;
+    }
+    .status-value {
+      font-weight: 600;
+      color: #00e676;
+    }
+  </style>
+
+  <!-- Vela & Vela-PineTS Global Bundles -->
+  <script src="/vela.global.min.js"></script>
+  <script src="/vela-pinets.global.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span>PHASE 404</span>
+      <span class="badge">Vela Charting Engine</span>
+      <span class="badge badge-gold">PineTS Native</span>
+      <span id="script-status" style="font-size: 12px; font-weight: 500; color: #00e676; margin-left: 12px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.25); padding: 3px 8px; border-radius: 4px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #00e676;"></span>
+        Active (Live Real-Time)
+      </span>
+    </div>
+
+    <div class="controls">
+      <select id="symbol-select">
+        <option value="PAXGUSDT">XAUUSD / Gold (PAXG 1:1 Spot)</option>
+        <option value="BTCUSDT">BTC / USDT</option>
+        <option value="ETHUSDT">ETH / USDT</option>
+        <option value="SOLUSDT">SOL / USDT</option>
+      </select>
+
+      <button class="tf-btn" data-tf="1">1m</button>
+      <button class="tf-btn active" data-tf="5">5m</button>
+      <button class="tf-btn" data-tf="15">15m</button>
+      <button class="tf-btn" data-tf="60">1h</button>
+
+      <button id="toggle-indicator" class="active">P404 Phase 1 Indicator: ON</button>
+      <button id="toggle-ticket" style="background: rgba(41, 98, 255, 0.18); border: 1px solid rgba(41, 98, 255, 0.4); color: #70a1ff; font-weight: 600;">⚡ Deployed Orders Ticket</button>
+    </div>
+  </header>
+
+  <div id="chart-container">
+    <div id="chart"></div>
+
+    <div id="ticket-drawer" style="display: none; position: absolute; bottom: 20px; right: 20px; width: 360px; background: rgba(15, 20, 30, 0.94); backdrop-filter: blur(12px); border: 1px solid #29384d; border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.7); z-index: 100; padding: 14px; font-size: 12px; color: #d1d4dc;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #233144; padding-bottom: 8px;">
+        <span style="font-weight: 700; color: #fff; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+          <span style="color: #ffab00;">🎯</span> Deployed Trade Order Ticket
+        </span>
+        <button id="close-ticket" style="background: transparent; border: none; color: #8892b0; font-size: 16px; cursor: pointer; padding: 0 4px;">✕</button>
+      </div>
+      <div id="ticket-content">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #8892b0;">Status:</span>
+          <span id="ticket-status" style="font-weight: 600; color: #ffab00;">Scanning Sessions</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #8892b0;">Action:</span>
+          <span id="ticket-action" style="font-weight: 600; color: #00e676;">STANDBY</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #8892b0;">Model:</span>
+          <span id="ticket-model" style="font-weight: 500;">P404 Phase 1 (OTE / IFVG)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #8892b0;">Raided Session:</span>
+          <span id="ticket-raid" style="font-weight: 500; color: #ff5252;">Monitoring Levels</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #8892b0;">Target Liquidity:</span>
+          <span id="ticket-target" style="font-weight: 600; color: #00e676;">Raided Session Extreme</span>
+        </div>
+        <div style="margin-top: 10px; border-top: 1px solid #233144; padding-top: 8px;">
+          <div style="font-size: 11px; color: #787b86; margin-bottom: 4px;">Webhook JSON Payload (MT5 / Bybit / Crypto):</div>
+          <textarea id="ticket-payload" readonly style="width: 100%; height: 75px; background: #0c1017; border: 1px solid #1c2635; border-radius: 4px; color: #a5d6a7; font-family: monospace; font-size: 10px; padding: 6px; resize: none;"></textarea>
+          <button id="copy-payload" style="width: 100%; margin-top: 6px; background: #2962ff; color: #fff; border: none; padding: 6px; border-radius: 4px; font-weight: 600; cursor: pointer;">📋 Copy Order Payload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let chart = null;
+    let currentTf = '5';
+    let currentSymbol = 'PAXGUSDT';
+    let indicatorHandle = null;
+    let pineSource = '';
+
+    async function initChart() {
+      const statusEl = document.getElementById('script-status');
+      statusEl.textContent = 'Fetching script & initializing Vela...';
+
+      // 1. Load the compiled indicator asset: base64 -> gzip -> script text
+      try {
+        const res = await fetch('/p404.asset');
+        const bytes = Uint8Array.from(atob((await res.text()).trim()), (c) => c.charCodeAt(0));
+        pineSource = await new Response(
+          new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
+        ).text();
+      } catch (err) {
+        console.error('Failed to load indicator asset:', err);
+        statusEl.textContent = 'Error loading indicator';
+        return;
+      }
+
+      // 2. Initialize Vela Chart
+      try {
+        const container = document.getElementById('chart');
+        container.innerHTML = '';
+
+        chart = new Vela.Vela('#chart', {
+          symbol: 'binance:' + currentSymbol,
+          timeframe: currentTf,
+          live: true
+        });
+
+        // 3. Register Data Provider
+        chart.data.registerProvider('binance', new Vela.BinanceProvider());
+
+        // 4. Register PineTS Engine
+        const pineEngine = new VelaPinets.PineEngine();
+        chart.registerEngine('pine', pineEngine);
+
+        await chart.ready();
+
+        // 5. Attach P404 Phase 1 v1 script
+        // addIndicator returns the handle synchronously; data lands on 'ready'.
+        statusEl.textContent = 'Executing P404 PineTS...';
+        indicatorHandle = chart.addIndicator(pineSource);
+
+        indicatorHandle.on('ready', () => {
+          statusEl.textContent = 'Active (Live Real-Time)';
+          console.log('Vela Chart & P404 Indicator initialized successfully!');
+          refreshTicketState();
+        });
+        indicatorHandle.on('error', (e) => {
+          const err = e && e.error ? e.error : e;
+          console.error('P404 indicator error:', err);
+          statusEl.textContent = 'Indicator error: ' + (err && err.message ? err.message : err);
+        });
+
+        // Re-pull live state whenever the engine recomputes.
+        chart.on('context:changed', () => refreshTicketState());
+      } catch (err) {
+        console.error('Vela Init Error:', err);
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    // Timeframe selector
+    document.querySelectorAll('.tf-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTf = btn.getAttribute('data-tf');
+        if (chart) {
+          chart.setMarket({ symbol: 'binance:' + currentSymbol, timeframe: currentTf });
+        }
+      });
+    });
+
+    // Symbol selector
+    document.getElementById('symbol-select').addEventListener('change', async (e) => {
+      currentSymbol = e.target.value;
+      if (chart) {
+        chart.setMarket({ symbol: 'binance:' + currentSymbol, timeframe: currentTf });
+      }
+    });
+
+    // Toggle indicator
+    let indicatorOn = true;
+    document.getElementById('toggle-indicator').addEventListener('click', () => {
+      indicatorOn = !indicatorOn;
+      const btn = document.getElementById('toggle-indicator');
+      if (indicatorOn) {
+        btn.textContent = 'P404 Phase 1 Indicator: ON';
+        btn.classList.add('active');
+        if (indicatorHandle && typeof indicatorHandle.setVisible === 'function') {
+          indicatorHandle.setVisible(true);
+        }
+      } else {
+        btn.textContent = 'P404 Phase 1 Indicator: OFF';
+        btn.classList.remove('active');
+        if (indicatorHandle && typeof indicatorHandle.setVisible === 'function') {
+          indicatorHandle.setVisible(false);
+        }
+      }
+    });
+
+    // Trade ticket drawer
+    const ticketDrawer = document.getElementById('ticket-drawer');
+    document.getElementById('toggle-ticket').addEventListener('click', () => {
+      ticketDrawer.style.display = ticketDrawer.style.display === 'none' ? 'block' : 'none';
+      updateTicketInfo();
+    });
+    document.getElementById('close-ticket').addEventListener('click', () => {
+      ticketDrawer.style.display = 'none';
+    });
+    document.getElementById('copy-payload').addEventListener('click', () => {
+      const payload = document.getElementById('ticket-payload').value;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(payload);
+      }
+      const btn = document.getElementById('copy-payload');
+      btn.textContent = '✅ Copied to Clipboard!';
+      setTimeout(() => btn.textContent = '📋 Copy Order Payload', 2000);
+    });
+
+    // ------------------------------------------------------------------
+    // Live ticket state — read from the running P404 indicator.
+    // The engine exposes its variables through handle.context().variables,
+    // de-mangled from the transpiler's `glb1_` prefix back to Pine names.
+    // ------------------------------------------------------------------
+    let liveVars = null;
+
+    async function refreshTicketState() {
+      if (!indicatorHandle || typeof indicatorHandle.context !== 'function') return;
+      try {
+        const snap = await indicatorHandle.context(['variables']);
+        if (snap && snap.variables) {
+          liveVars = snap.variables;
+          renderTicket();
+        }
+      } catch (err) {
+        console.warn('Ticket context pull failed:', err);
+      }
+    }
+
+    const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+    const money = (v) => isNum(v) ? '$' + v.toFixed(2) : '—';
+
+    // Derive the ticket from the P404 state machine.
+    //   state 0 = idle | 1/2 = raid confirmed, awaiting MSS | 3/4 = MSS, awaiting entry
+    //   5 = long | 6 = short
+    function deriveTicket(v) {
+      const NA = '—';
+      if (!v) {
+        return {
+          status: 'Awaiting Engine', action: 'STANDBY', model: 'P404 Phase 1 (OTE / IFVG)',
+          raid: 'No data yet', target: NA, tone: '#8892b0',
+          payload: {
+            symbol: currentSymbol, strategy: 'PHASE_404_PHASE1', timeframe: currentTf + 'm',
+            state: 'NO_DATA', action: 'NONE', orderType: 'NONE',
+            timestamp: new Date().toISOString()
+          },
+          note: 'Indicator has not produced a context snapshot yet.'
+        };
+      }
+
+      const state = isNum(v.state) ? v.state : 0;
+      const src = v.setupSource || '';
+      const target = v.setupTarget;
+
+      // Which session was raided, and in which direction.
+      const raidLabel = (() => {
+        if (state === 1 || state === 3 || state === 5) return (src || NA) + ' LOW raided';
+        if (state === 2 || state === 4 || state === 6) return (src || NA) + ' HIGH raided';
+        if (v.lastBullRaidSource || v.lastBearRaidSource) {
+          const b = v.lastBullRaidBar, s = v.lastBearRaidBar;
+          const useBull = isNum(b) && (!isNum(s) || b >= s);
+          return (useBull ? v.lastBullRaidSource + ' LOW' : v.lastBearRaidSource + ' HIGH') + ' (last)';
+        }
+        return 'Monitoring Levels';
+      })();
+
+      const targetLabel = (() => {
+        if (!isNum(target)) return NA;
+        // Target is always the OPPOSITE extreme of the raided session.
+        const isLongBias = state === 1 || state === 3 || state === 5;
+        return (src || 'SESSION') + (isLongBias ? ' HIGH' : ' LOW') + ' @ ' + money(target);
+      })();
+
+      if (state === 5 || state === 6) {
+        const long = state === 5;
+        const entry = v.entryPrice, stop = v.stopPrice, tgt = v.targetPrice;
+        const risk = isNum(entry) && isNum(stop) ? Math.abs(entry - stop) : null;
+        const reward = isNum(entry) && isNum(tgt) ? Math.abs(tgt - entry) : null;
+        const rr = risk && reward ? (reward / risk).toFixed(2) : null;
+        return {
+          status: 'In Position', action: long ? 'BUY / LONG' : 'SELL / SHORT',
+          model: (v.setupModel || 'OTE') + ' — ' + (long ? 'Long' : 'Short'),
+          raid: raidLabel, target: targetLabel, tone: long ? '#00e676' : '#ff5252',
+          payload: {
+            symbol: currentSymbol, strategy: 'PHASE_404_PHASE1', timeframe: currentTf + 'm',
+            state: 'IN_POSITION', action: long ? 'BUY' : 'SELL', orderType: 'MARKET',
+            entry: isNum(entry) ? entry : null,
+            stopLoss: isNum(stop) ? stop : null,
+            takeProfit: isNum(tgt) ? tgt : null,
+            model: v.setupModel || null,
+            raidedSession: src || null,
+            riskReward: rr ? rr + ':1' : null,
+            timestamp: new Date().toISOString()
+          },
+          note: null
+        };
+      }
+
+      if (state === 3 || state === 4) {
+        const long = state === 3;
+        const ote618 = long ? v.fib618 : v.fib786;
+        const ote786 = long ? v.fib786 : v.fib618;
+        return {
+          status: 'Pending Order (Awaiting Retracement)', action: long ? 'BUY LIMIT' : 'SELL LIMIT',
+          model: 'OTE 0.618–0.786 / IFVG',
+          raid: raidLabel, target: targetLabel, tone: long ? '#00e676' : '#ff5252',
+          payload: {
+            symbol: currentSymbol, strategy: 'PHASE_404_PHASE1', timeframe: currentTf + 'm',
+            state: 'PENDING_ENTRY', action: long ? 'BUY' : 'SELL', orderType: 'LIMIT',
+            limitZoneLow: isNum(ote618) && isNum(ote786) ? Math.min(ote618, ote786) : null,
+            limitZoneHigh: isNum(ote618) && isNum(ote786) ? Math.max(ote618, ote786) : null,
+            takeProfit: isNum(target) ? target : null,
+            raidedSession: src || null,
+            timestamp: new Date().toISOString()
+          },
+          note: 'Place limit at the OTE golden pocket, or wait for the IFVG candle close.'
+        };
+      }
+
+      if (state === 1 || state === 2) {
+        const long = state === 1;
+        return {
+          status: 'Pending (Raid Confirmed, Awaiting MSS)', action: 'STANDBY',
+          model: 'P404 Phase 1 (OTE / IFVG)',
+          raid: raidLabel, target: targetLabel, tone: long ? '#00e676' : '#ff5252',
+          payload: {
+            symbol: currentSymbol, strategy: 'PHASE_404_PHASE1', timeframe: currentTf + 'm',
+            state: 'AWAITING_MSS', action: long ? 'BUY' : 'SELL', orderType: 'NONE',
+            bias: long ? 'BULLISH' : 'BEARISH',
+            raidedSession: src || null,
+            takeProfit: isNum(target) ? target : null,
+            timestamp: new Date().toISOString()
+          },
+          note: 'Wait for the MSS shift (break of swing ' + (long ? 'high' : 'low') + ') before placing an order.'
+        };
+      }
+
+      return {
+        status: 'Scanning Sessions', action: 'STANDBY', model: 'P404 Phase 1 (OTE / IFVG)',
+        raid: raidLabel, target: targetLabel, tone: '#ffab00',
+        payload: {
+          symbol: currentSymbol, strategy: 'PHASE_404_PHASE1', timeframe: currentTf + 'm',
+          state: 'SCANNING', action: 'NONE', orderType: 'NONE',
+          timestamp: new Date().toISOString()
+        },
+        note: 'Stand by for the next session liquidity raid.'
+      };
+    }
+
+    function renderTicket() {
+      const t = deriveTicket(liveVars);
+      const set = (id, text, color) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text;
+        if (color) el.style.color = color;
+      };
+      set('ticket-status', t.status, t.tone);
+      set('ticket-action', t.action, t.tone);
+      set('ticket-model', t.model);
+      set('ticket-raid', t.raid, t.tone === '#ffab00' ? '#ff5252' : t.tone);
+      set('ticket-target', t.target);
+      // Keep the payload valid JSON — it is meant to be pasted into a broker.
+      const payload = t.note ? Object.assign({ note: t.note }, t.payload) : t.payload;
+      document.getElementById('ticket-payload').value = JSON.stringify(payload, null, 2);
+    }
+
+    function updateTicketInfo() {
+      if (liveVars) renderTicket();
+      else refreshTicketState();
+    }
+    updateTicketInfo();
+
+    // Start on load
+    window.addEventListener('DOMContentLoaded', initChart);
+  </script>
+
+</body>
+</html>
